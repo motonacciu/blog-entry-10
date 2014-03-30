@@ -1,4 +1,9 @@
-blog-entry-10
+Use of X-Macros with Flex/Bison
 =============
 
-Code supporting blog entry 10 at... (FILLE ME LATER)
+This repository contains supporting code for the blog post () describing a techniques on how to use X-Macros while dealing with Bison and Flex specifications. 
+
+Compile
+========
+
+cmake . && make
