@@ -11,6 +11,8 @@
 OPERATOR(add, 3, reg, reg, OPTION(reg, imm))
 OPERATOR(sub, 3, reg, reg, OPTION(reg, imm, lab))
 OPERATOR(bra, 2, reg, lab)
+OPERATOR(jmp, 1, lab)
+OPERATOR(mul, 3, reg, reg, imm)
 
 #undef OPTION
 #undef OPERATOR

@@ -16,15 +16,37 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+set(PATCHER ${CMAKE_SOURCE_DIR}/xmacro_patcher.py)
+
 # set a temporary dir for Flex and Yacc generated files 
 set(TMP_DIR "generated")
 
 # make a dir to store the temporary files 
 file(MAKE_DIRECTORY ${TMP_DIR})
 
+set(BisonTemplFile ${CMAKE_SOURCE_DIR}/parser.y.in)
+set(BisonSpecFile  ${TMP_DIR}/parser.y)
+
+file(WRITE ${TMP_DIR}/opcodes.y.cpp 
+	"\#define OPERATOR(NAME, ...) OP_##NAME\n"
+	"\#include \"opcodes.def\"\n")
+
+add_custom_command(
+	OUTPUT  ${BisonSpecFile}
+	DEPENDS ${PATCHER} 
+			${CMAKE_SOURCE_DIR}/opcodes.def 
+			${BisonTemplFile} 
+			${TMP_DIR}/opcodes.y.cpp
+	COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.y.cpp
+			| ${PATCHER} -j \" \" -t ${BisonTemplFile} -r \"@@{{OPCODES_DEF}}@@\" -o ${BisonSpecFile}.tmp && 
+			${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.y.cpp
+			| ${PATCHER} -j \"|\" -t ${BisonSpecFile}.tmp -r \"@@{{OPCODES_GRAM}}@@\" -o ${BisonSpecFile}
+	)
+
+add_custom_target(gen_parser_spec DEPENDS ${BisonSpecFile})
+
 find_package(BISON REQUIRED)
 set(BisonOutput ${TMP_DIR}/parser.cpp ${CMAKE_SOURCE_DIR}/parser.h)
-set(BisonSpecFile parser.y)
 if(BISON_FOUND)
     add_custom_command(
 		OUTPUT ${BisonOutput}
@@ -32,7 +54,7 @@ if(BISON_FOUND)
 				--defines=${CMAKE_SOURCE_DIR}/parser.h
         		--output=${TMP_DIR}/parser.cpp
 				${BisonSpecFile}
-		DEPENDS ${BisonSpecFile}
+		DEPENDS ${BisonSpecFile} gen_parser_spec
 		COMMENT "Generating ${BisonOutput}"
 		VERBATIM
     )
@@ -42,16 +64,18 @@ set(FlexTemplFile ${CMAKE_SOURCE_DIR}/lexer.ll.in)
 set(FlexSpecFile  ${TMP_DIR}/lexer.ll)
 
 file(WRITE ${TMP_DIR}/opcodes.ll.cpp 
-	"\#define OPERATOR(NAME, ...) NAME			{ return OP_##NAME; }\n"
+	"\#define OPERATOR(NAME, ...) NAME	{ return OP_##NAME; }\n"
 	"\#include \"opcodes.def\"\n")
 
 add_custom_command(
 	OUTPUT  ${FlexSpecFile}
-	DEPENDS ${CMAKE_SOURCE_DIR}/patcher.py 
+	DEPENDS ${PATCHER} 
 			${CMAKE_SOURCE_DIR}/opcodes.def 
-			${FlexTemplFile} ${TMP_DIR}/opcodes.ll.cpp
+			${FlexTemplFile} 
+			${TMP_DIR}/opcodes.ll.cpp
 	COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.ll.cpp
-			| ${CMAKE_SOURCE_DIR}/patcher.py -t ${FlexTemplFile} -r \"@@{{OPCODES}}@@\" -o ${FlexSpecFile})
+			| ${PATCHER} -t ${FlexTemplFile} -r \"@@{{OPCODES}}@@\" -o ${FlexSpecFile}
+	)
 
 add_custom_target(gen_lexer_spec DEPENDS ${FlexSpecFile})
 

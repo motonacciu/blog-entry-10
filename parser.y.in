@@ -26,7 +26,8 @@ extern "C"
 
 %token <integer> IMMEDIATE  
 %token <string>  IDENTIFIER 
-%token <token>   NEWLINE COMMA COLON OP_add OP_sub OP_bra
+%token <token>   NEWLINE COMMA COLON 
+				 @@{{OPCODES_DEF}}@@
 %%
 
 start: 
@@ -51,5 +52,5 @@ argument:
 	;
 
 operator:
-	OP_add | OP_sub | OP_bra
+	@@{{OPCODES_GRAM}}@@
 	;
