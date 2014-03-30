@@ -11,10 +11,10 @@ extern void yyerror(const char*);
 %option case-insensitive
 
 %%
-	/* operators */
-add						{ return OP_ADD; }
-sub						{ return OP_SUB; }
-bra						{ return OP_BRA; }
+
+	/* Start Opcodes */
+@@{{OPCODES}}@@
+	/* End Opcodes */
 
 ,						{ return COMMA; }
 :						{ return COLON; }

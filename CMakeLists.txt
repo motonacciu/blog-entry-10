@@ -38,16 +38,32 @@ if(BISON_FOUND)
     )
 endif()
 
+set(FlexTemplFile ${CMAKE_SOURCE_DIR}/lexer.ll.in)
+set(FlexSpecFile  ${TMP_DIR}/lexer.ll)
+
+file(WRITE ${TMP_DIR}/opcodes.ll.cpp 
+	"\#define OPERATOR(NAME, ...) NAME			{ return OP_##NAME; }\n"
+	"\#include \"opcodes.def\"\n")
+
+add_custom_command(
+	OUTPUT  ${FlexSpecFile}
+	DEPENDS ${CMAKE_SOURCE_DIR}/patcher.py 
+			${CMAKE_SOURCE_DIR}/opcodes.def 
+			${FlexTemplFile} ${TMP_DIR}/opcodes.ll.cpp
+	COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.ll.cpp
+			| ${CMAKE_SOURCE_DIR}/patcher.py -t ${FlexTemplFile} -r \"@@{{OPCODES}}@@\" -o ${FlexSpecFile})
+
+add_custom_target(gen_lexer_spec DEPENDS ${FlexSpecFile})
+
 find_package(FLEX REQUIRED)
 set(FlexOutput ${TMP_DIR}/lexer.cpp)
-set(FlexSpecFile lexer.ll)
 if(FLEX_FOUND)
     add_custom_command(
       	OUTPUT ${FlexOutput}
       	COMMAND ${FLEX_EXECUTABLE}
             	--outfile=${FlexOutput}
 				${FlexSpecFile}
-		DEPENDS ${FlexSpecFile} ${BisonOutput}
+		DEPENDS ${FlexSpecFile} ${BisonOutput} gen_lexer_spec
 		COMMENT "Generating ${FlexOutput}"
 		VERBATIM
     )
