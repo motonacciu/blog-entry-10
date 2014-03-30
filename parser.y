@@ -1,0 +1,55 @@
+%code requires
+{
+	#include <string>
+}
+
+%{
+
+#include <iostream>
+
+void yyerror(const char *s) 
+{
+	std::cerr << s << std::endl;
+}
+
+extern "C"
+{
+	int yylex();
+}
+%}
+
+%union {
+  int		   token;
+  int 		   integer;
+  std::string* string;
+};
+
+%token <integer> IMMEDIATE  
+%token <string>  IDENTIFIER 
+%token <token>   NEWLINE COMMA COLON OP_ADD OP_SUB OP_BRA
+%%
+
+start: 
+		start instruction
+	|
+		/* NULL */
+	;
+
+instruction:
+		operator argument_list NEWLINE { std::cout << "Correct Instruction!" << std::endl; }
+	|
+		IDENTIFIER COLON NEWLINE       { std::cout << "Defined label: " << *$1 << std::endl; }
+
+argument_list:
+		argument_list COMMA argument
+	|
+		argument
+	;
+
+argument:
+		IMMEDIATE | IDENTIFIER
+	;
+
+operator:
+	OP_ADD | OP_SUB | OP_BRA
+	;
