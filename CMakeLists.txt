@@ -19,22 +19,24 @@ include_directories(${CMAKE_SOURCE_DIR})
 set(PATCHER ${CMAKE_SOURCE_DIR}/xmacro_patcher.py)
 
 # set a temporary dir for Flex and Yacc generated files 
-set(TMP_DIR "generated")
+set(TMP_DIR ${CMAKE_BINARY_DIR}/generated)
 
 # make a dir to store the temporary files 
 file(MAKE_DIRECTORY ${TMP_DIR})
+include_directories(${TMP_DIR})
 
+set(XMacroFile     ${CMAKE_SOURCE_DIR}/opcodes.def)
 set(BisonTemplFile ${CMAKE_SOURCE_DIR}/parser.y.in)
 set(BisonSpecFile  ${TMP_DIR}/parser.y)
 
 file(WRITE ${TMP_DIR}/opcodes.y.cpp 
 	"\#define OPERATOR(NAME, ...) OP_##NAME\n"
-	"\#include \"opcodes.def\"\n")
+	"\#include \"${XMacroFile}\"\n")
 
 add_custom_command(
 	OUTPUT  ${BisonSpecFile}
 	DEPENDS ${PATCHER} 
-			${CMAKE_SOURCE_DIR}/opcodes.def 
+			${XMacroFile} 
 			${BisonTemplFile} 
 			${TMP_DIR}/opcodes.y.cpp
 	COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.y.cpp
@@ -51,7 +53,7 @@ if(BISON_FOUND)
     add_custom_command(
 		OUTPUT ${BisonOutput}
 		COMMAND ${BISON_EXECUTABLE}
-				--defines=${CMAKE_SOURCE_DIR}/parser.h
+				--defines=${TMP_DIR}/parser.h
         		--output=${TMP_DIR}/parser.cpp
 				${BisonSpecFile}
 		DEPENDS ${BisonSpecFile} gen_parser_spec
@@ -65,12 +67,12 @@ set(FlexSpecFile  ${TMP_DIR}/lexer.ll)
 
 file(WRITE ${TMP_DIR}/opcodes.ll.cpp 
 	"\#define OPERATOR(NAME, ...) NAME	{ return OP_##NAME; }\n"
-	"\#include \"opcodes.def\"\n")
+	"\#include \"${XMacroFile}\"\n")
 
 add_custom_command(
 	OUTPUT  ${FlexSpecFile}
 	DEPENDS ${PATCHER} 
-			${CMAKE_SOURCE_DIR}/opcodes.def 
+			${XMacroFile} 
 			${FlexTemplFile} 
 			${TMP_DIR}/opcodes.ll.cpp
 	COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXXFLAGS} -I. -E ${TMP_DIR}/opcodes.ll.cpp
@@ -93,6 +95,4 @@ if(FLEX_FOUND)
     )
 endif()
 
-add_executable(main1 ${CMAKE_CURRENT_SOURCE_DIR}/main1.cpp)
-
-add_executable(main2 ${CMAKE_CURRENT_SOURCE_DIR}/main2.cpp ${BisonOutput} ${FlexOutput})
+add_executable(main ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ${BisonOutput} ${FlexOutput})
